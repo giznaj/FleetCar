@@ -1,8 +1,8 @@
 # FleetCar
 Arduino project for an autonomous car
 
-## Developed for arduino hobbyists (MA570)
-This is a tool to help visualize randomess and probability by displaying data in bar charts.
+## Developed for Arduino hobbyists
+This Arduino project simulates an autonomous vehicle.  It has some basic AI and/or autonomy that allows it to drive and correct for errors. 
 
 ### Installation Instructions
 1. Configure sketch as per your hardware needs 
@@ -10,10 +10,14 @@ This is a tool to help visualize randomess and probability by displaying data in
 3. Run
  
 ### How to use
-This car was designed to drive on a track that has walls at least 1 foot tall.  The car can drive on a figure 8 track if the intersection implements a bridge
-
+1. Turn car on (2 power supplies)
+2. Enjoy!
 
 ### Notes
+- This car was designed to drive on a track that has walls at least 1 foot tall.  
+- The car can drive on a figure 8 track if the intersection implements a bridge
+
+### Very Important
 * Work in Progress
 * WIP
 * Use at OWN risk right now
