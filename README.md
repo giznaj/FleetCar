@@ -1,5 +1,5 @@
 # FleetCar
-Arduino project for an autonomous car
+Arduino project for an autonomous car that uses ultrasonice sensors for object detection
 
 ## Developed for Arduino hobbyists
 This Arduino project simulates an autonomous vehicle.  It has some basic AI and/or autonomy that allows it to drive and correct for errors. 

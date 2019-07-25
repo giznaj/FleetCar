@@ -66,8 +66,6 @@ void setup()
 
   //serial port
   Serial.begin(9600);
-  //Serial.println(rightDistance);
-  //Serial.println(leftDistance);
   
   //delay
   delay(2000);
@@ -87,7 +85,7 @@ void setup()
   //motor
   motor.setSpeed(90);
   motor.run(RELEASE);
-  motor.run(FORWARD); // Run the car forward until something good or bad happens
+  motor.run(FORWARD); //run the car forward until something good or bad happens
 
   //delay
   delay(1000);
@@ -104,8 +102,6 @@ float getFrontDistance()
 float getRightDistance()
 {
   rightCurrentDistance = float(hcsr04Right.ping_median(2));
-  //String text = "right distance ";
-  //Serial.println(text + rightDistance);
   return rightCurrentDistance;
 }
 
@@ -113,8 +109,6 @@ float getRightDistance()
 float getLeftDistance()
 {
   leftCurrentDistance = float(hcsr04Left.ping_median(2));
-  //String text = "left distance ";
-  //Serial.println(text + leftDistance);
   return leftCurrentDistance;
 }
 
@@ -140,8 +134,6 @@ void turnRight()
 {
   currentAngle = servoSteering.read();
   float moveAngle = (currentAngle - turnIncrement);
-  //Serial.println(currentAngle);
-  //Serial.println(moveAngle);
   if (moveAngle > 69)
   {
     servoSteering.write(moveAngle);
@@ -154,8 +146,6 @@ void turnLeft()
 {
   currentAngle = servoSteering.read();
   float moveAngle = (currentAngle + turnIncrement);
-  //Serial.println(currentAngle);
-  //Serial.println(moveAngle);
   if (moveAngle < 111)
   {
     servoSteering.write(moveAngle);
@@ -163,7 +153,7 @@ void turnLeft()
   }
 }
 
-//check blind spots
+//check blind spots and then turn around
 void turnAround()
 {
   delay(500);
@@ -209,17 +199,13 @@ void loop()
   
   //need to add these to a state machine call
   rightCurrentDistance = getRightDistance(); //get the current distance (right side)
-  //Serial.println(rightCurrentDistance);
   leftCurrentDistance = getLeftDistance(); //get the current distance (left side)
-  //Serial.println(leftCurrentDistance);
   distanceDelta = abs(rightCurrentDistance - leftCurrentDistance); //absolute value of the difference between the left and right sides
   distanceTotal = rightCurrentDistance + leftCurrentDistance; //sum of the left and right distance
   
   //if (distanceTotal < 1600) //get rid of noise.  large distances when the agent is not on a track (how far we look out to the sides)
   rightAbsoluteValue = abs(rightCurrentDistance - rightDistance);
   leftAbsoluteValue = abs(leftCurrentDistance - leftDistance);
-  Serial.println(rightAbsoluteValue);
-  Serial.println(leftAbsoluteValue);
   if ((rightAbsoluteValue < distanceTolerance) && (leftAbsoluteValue < distanceTolerance))
   {
     //do nothing.  distance didn't change so DO NOT TURN THE STEERING WHEELS.  You're probably good.
