@@ -28,24 +28,25 @@ Servo servoReverse;
 NewPing hcsr04Right(trigPin1, echoPin1, maxDistance);
 NewPing hcsr04Left(trigPin2, echoPin2, maxDistance);
 NewPing hcsr04MiddleFront(trigPin3, echoPin3, 3000);
-float initialAngle = 90.0; // initial angle of the direction the wheels face (straight ahead)
-float minAngle = 65.0; // lowest angle we'll let the servo turn left (so we don't break the steering column)
-float maxAngle = 115.0; // highest angle we'll let the servo turn right (so we don't break the steering column)
-float frontMiddleDistance; // (current) distance from the object directly in front of the vehicle
-float rightDistance = 0.0; // (previous) distance from wall/object to front right wheel
-float leftDistance = 0.0; // (previous) distance from wall/object to front left wheel
-float rightCurrentDistance = 0.0; // (current) distance from wall/object to front left wheel
-float leftCurrentDistance = 0.0; // (current) distance from wall/object to front left wheel
-float currentAngle = 0.0; // current angle (when being checked before it is probably moved)
-float backLeftDistance = 0.0; // distance to object when looking back over left shoulder
-float backRightDistance = 0.0; // distance to object when looking back over right shoulder
-const float turnIncrement = 5.0; // the angle amount the steering wheel will turn left or right
-const float deltaThreshold = 60.0; // the distance to set the signicance or willingness to turn.  How much more or less one side has other the other.  This can be changed to increase performance - CAREFUL!
-float distanceTotal = 0.0; // total distance (sum of right and left distances)
-float distanceTolerance = 15.0; // the distance to account for noise (ping echo distance).  Delta between distance and current distance is valid or an error. (the lower the number, more aggressive steering)
-float distanceDelta = 0.0; // The difference between the distances of both sides (i.e.  left tire is 90 and right tire is 110.  the delta is the abs(20) |20|.
-int rightAbsoluteValue = 0;
-int leftAbsoluteValue = 0;
+
+float initialAngle = 90.0; //initial angle of the direction the wheels face (straight ahead)
+float minAngle = 65.0; //lowest angle we'll let the servo turn left (so we don't break the steering column)
+float maxAngle = 115.0; //highest angle we'll let the servo turn right (so we don't break the steering column)
+float frontMiddleDistance; //(current) distance from the object directly in front of the vehicle
+float rightDistance = 0.0; //(previous) distance from wall/object to front right wheel
+float leftDistance = 0.0; //(previous) distance from wall/object to front left wheel
+float rightCurrentDistance = 0.0; //(current) distance from wall/object to front left wheel
+float leftCurrentDistance = 0.0; //(current) distance from wall/object to front left wheel
+float currentAngle = 0.0; //current angle (when being checked before it is probably moved)
+float backLeftDistance = 0.0; //distance to object when looking back over left shoulder
+float backRightDistance = 0.0; //distance to object when looking back over right shoulder
+const float turnIncrement = 5.0; //the angle amount the steering wheel will turn left or right
+const float deltaThreshold = 60.0; //the distance to set the signicance or willingness to turn.  How much more or less one side has other the other.  This can be changed to increase performance - CAREFUL!
+float distanceTotal = 0.0; //total distance (sum of right and left distances)
+float distanceTolerance = 15.0; //the distance to account for noise (ping echo distance).  Delta between distance and current distance is valid or an error. (the lower the number, more aggressive steering)
+float distanceDelta = 0.0; //the difference between the distances of both sides (i.e.  left tire is 90 and right tire is 110.  the delta is the abs(20) |20|.
+int rightAbsoluteValue = 0; //absolute value of right distance
+int leftAbsoluteValue = 0; //absolute value of left distance
 
 void setup()
 {
@@ -88,7 +89,7 @@ void setup()
   motor.run(RELEASE);
   motor.run(FORWARD); // Run the car forward until something good or bad happens
 
-  // delay
+  //delay
   delay(1000);
 }
 
@@ -128,13 +129,13 @@ void reverseMotor()
   motor.run(BACKWARD);
 }
 
-// stop the motor
+//stop the motor
 void stopMotor()
 {
   motor.run(RELEASE);
 }
 
-// turn right
+//turn right
 void turnRight()
 {
   currentAngle = servoSteering.read();
@@ -189,7 +190,7 @@ void driveStraight()
 {
   currentAngle = servoSteering.read();
   servoSteering.write(initialAngle);
-  delay(45); // let motor take time to get to the new position
+  delay(45); //let motor take time to get to the new position
 }
 
 void loop()
@@ -207,14 +208,14 @@ void loop()
   }
   
   //need to add these to a state machine call
-  rightCurrentDistance = getRightDistance(); // get the current distance (right side)
+  rightCurrentDistance = getRightDistance(); //get the current distance (right side)
   //Serial.println(rightCurrentDistance);
-  leftCurrentDistance = getLeftDistance(); // get the current distance (left side)
+  leftCurrentDistance = getLeftDistance(); //get the current distance (left side)
   //Serial.println(leftCurrentDistance);
-  distanceDelta = abs(rightCurrentDistance - leftCurrentDistance); // absolute value of the difference between the left and right sides
-  distanceTotal = rightCurrentDistance + leftCurrentDistance; // sum of the left and right distance
+  distanceDelta = abs(rightCurrentDistance - leftCurrentDistance); //absolute value of the difference between the left and right sides
+  distanceTotal = rightCurrentDistance + leftCurrentDistance; //sum of the left and right distance
   
-  //if (distanceTotal < 1600) // get rid of noise.  large distances when the agent is not on a track (how far we look out to the sides)
+  //if (distanceTotal < 1600) //get rid of noise.  large distances when the agent is not on a track (how far we look out to the sides)
   rightAbsoluteValue = abs(rightCurrentDistance - rightDistance);
   leftAbsoluteValue = abs(leftCurrentDistance - leftDistance);
   Serial.println(rightAbsoluteValue);
