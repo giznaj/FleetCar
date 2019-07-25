@@ -77,7 +77,7 @@ void setup()
   delay(500);
   servoReverse.write(150);
   delay(500);
-  servoReverse.write(85);
+  servoReverse.write(82);
 
   //delay
   delay(1000);
@@ -167,12 +167,17 @@ void turnAround()
   delay(500);
   if(backLeftDistance > backRightDistance)
   {
-    turnLeft();   
+    turnLeft();
+    reverseMotor();
+    delay(1000);  
   }
   else
   {
     turnRight();
+    reverseMotor();
+    delay(1000);
   }
+  stopMotor();
 }
 
 //drive straight
