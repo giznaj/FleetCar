@@ -163,21 +163,30 @@ void turnAround()
   servoReverse.write(160);
   backRightDistance = float(hcsr04Left.ping_median(2));
   delay(500);
-  servoReverse.write(85);
+  servoReverse.write(82);
   delay(500);
   if(backLeftDistance > backRightDistance)
   {
     turnLeft();
+    delay(500);
     reverseMotor();
-    delay(1000);  
+    delay(2000);  
+  }
+  else if(backRightDistance > backLeftDistance)
+  {
+    turnRight();
+    delay(500);
+    reverseMotor();
+    delay(2000);
   }
   else
   {
-    turnRight();
     reverseMotor();
-    delay(1000);
+    delay(2000);
   }
   stopMotor();
+  delay(500);
+  driveMotor();
 }
 
 //drive straight
@@ -191,15 +200,15 @@ void driveStraight()
 void loop()
 {
   //GET THIS DISTANCE FIRST
-  if(getFrontDistance() < 1000)
+  if(getFrontDistance() < 1200)
   {
-    //start turn-around process
+    //stop car and start turn-around process
     stopMotor();
     turnAround();
   }
   else
   {
-    driveMotor();
+    //driveMotor();
   }
   
   //need to add these to a state machine call
