@@ -83,12 +83,12 @@ void setup()
   delay(1000);
   
   //motor
-  motor.setSpeed(90);
+  motor.setSpeed(64); //32 = eigth, 64 = quarter, 128 = half, 192 = three-quarter, 255 = full
   motor.run(RELEASE);
-  motor.run(FORWARD); //run the car forward until something good or bad happens
-
+  
+  //run the car forward until something good or bad happens
+  driveMotor();
   //delay
-  delay(1000);
 }
 
 //get the distance from the wall (Right side of car)
@@ -130,7 +130,7 @@ void stopMotor()
 }
 
 //turn right
-void turnRight()
+bool turnRight()
 {
   currentAngle = servoSteering.read();
   float moveAngle = (currentAngle - turnIncrement);
@@ -138,11 +138,16 @@ void turnRight()
   {
     servoSteering.write(moveAngle);
     delay(35); //let motor take time to get to the new position
+    return true;
+  }
+  else
+  {
+    return false;
   }
 }
 
 //turn left
-void turnLeft()
+bool turnLeft()
 {
   currentAngle = servoSteering.read();
   float moveAngle = (currentAngle + turnIncrement);
@@ -150,12 +155,18 @@ void turnLeft()
   {
     servoSteering.write(moveAngle);
     delay(35); //let motor take time to get to the new position
+    return true;
+  }
+  else
+  {
+    return false;
   }
 }
 
 //check blind spots and then turn around
 void turnAround()
 {
+  motor.setSpeed(64); //32 = eigth, 64 = quarter, 128 = half, 192 = three-quarter, 255 = full
   delay(500);
   servoReverse.write(20);
   backLeftDistance = float(hcsr04Left.ping_median(2));
@@ -165,16 +176,20 @@ void turnAround()
   delay(500);
   servoReverse.write(82);
   delay(500);
-  if(backLeftDistance > backRightDistance)
+  
+  if(backLeftDistance > backRightDistance) //turn around clockwise
   {
-    turnLeft();
+    do {
+      //nothing (execution code is in condition.  need to refactor)
+    } while (turnLeft());
     delay(500);
     reverseMotor();
     delay(2000);  
   }
-  else if(backRightDistance > backLeftDistance)
+  else if(backRightDistance > backLeftDistance) //turn around counter clockwise
   {
-    turnRight();
+    do { //nothing (execution code is in condition.  need to refactor)
+    } while (turnRight());
     delay(500);
     reverseMotor();
     delay(2000);
