@@ -37,6 +37,7 @@ float rightDistance = 0.0; //(previous) distance from wall/object to front right
 float leftDistance = 0.0; //(previous) distance from wall/object to front left wheel
 float rightCurrentDistance = 0.0; //(current) distance from wall/object to front left wheel
 float leftCurrentDistance = 0.0; //(current) distance from wall/object to front left wheel
+float reverseDistance = 0.0; //(current) distance from the wall behind the car while backing up (turning around)
 float currentAngle = 0.0; //current angle (when being checked before it is probably moved)
 float backLeftDistance = 0.0; //distance to object when looking back over left shoulder
 float backRightDistance = 0.0; //distance to object when looking back over right shoulder
@@ -179,25 +180,43 @@ void turnAround()
   
   if(backLeftDistance > backRightDistance) //turn around clockwise
   {
+    servoReverse.write(30); //look over left shoulder
     do {
       //nothing (execution code is in condition.  need to refactor)
     } while (turnLeft());
     delay(500);
     reverseMotor();
-    delay(2000);  
+    do {
+    } while (backLeftDistance = float(hcsr04Left.ping_median(2) > 1000));
+    motor.run(RELEASE);
+    delay(500);
+    do {
+      //nothing (execution code is in condition.  need to refactor)
+    } while (turnRight());
+    motor.run(FORWARD);
   }
+  
   else if(backRightDistance > backLeftDistance) //turn around counter clockwise
   {
-    do { //nothing (execution code is in condition.  need to refactor)
+    servoReverse.write(150); //look over right shoulder
+    do { 
+      //nothing (execution code is in condition.  need to refactor)
     } while (turnRight());
     delay(500);
     reverseMotor();
-    delay(2000);
+    do {
+    } while (backRightDistance = float(hcsr04Left.ping_median(2) > 1000));
+    motor.run(RELEASE);
+    delay(500);
+    do {
+      //nothing (execution code is in condition.  need to refactor)
+    } while (turnLeft());
+    motor.run(FORWARD);
   }
   else
   {
-    reverseMotor();
-    delay(2000);
+    //reverseMotor();
+    //delay(2000);
   }
   stopMotor();
   delay(500);
