@@ -7,7 +7,7 @@
 #include <Servo.h>
 #include <NewPing.h>
 
-#define maxDistance 200
+#define maxDistance 200 //200 centimeters = 6.6 feet
 //Right
 #define echoPin1 30 // microphone (listening for ping)
 #define trigPin1 31 // speaker (making ping sound)
@@ -25,14 +25,13 @@
 //Reverse Servo
 #define servoPinReverse 9 // reverse camera servo
 
-//AF_DCMotor motor(1);
-AF_DCMotor motor(2);
+AF_DCMotor motor(1);
 Servo servoSteering;
 Servo servoReverse;
 NewPing hcsr04Right(trigPin1, echoPin1, maxDistance);
 NewPing hcsr04Left(trigPin2, echoPin2, maxDistance);
-NewPing hcsr04MiddleFront(trigPin3, echoPin3, 4000);
-NewPing hcsr04MiddleRear(trigPin4, echoPin4, 4000);
+NewPing hcsr04MiddleFront(trigPin3, echoPin3, maxDistance);
+NewPing hcsr04MiddleRear(trigPin4, echoPin4, maxDistance);
 
 float initialAngle = 90.0; //initial angle of the direction the wheels face (straight ahead)
 float minAngle = 65.0; //lowest angle we'll let the servo turn left (so we don't break the steering column)
@@ -88,7 +87,7 @@ void setup()
   delay(1000);
   
   //motor
-  motor.setSpeed(64); //32 = eigth, 64 = quarter, 128 = half, 192 = three-quarter, 255 = full
+  motor.setSpeed(96); //32 = eigth, 64 = quarter, 128 = half, 192 = three-quarter, 255 = full
   motor.run(RELEASE);
   
   //run the car forward until something good or bad happens
@@ -114,6 +113,12 @@ float getLeftDistance()
 {
   leftCurrentDistance = float(hcsr04Left.ping_median(2));
   return leftCurrentDistance;
+}
+
+//get the distance from the wall using the rear camera/sensor
+float getRearDistance()
+{
+  return float(hcsr04MiddleRear.ping_median(2));
 }
 
 //drive the motor
@@ -170,7 +175,7 @@ bool turnLeft()
 //check blind spots and then turn around
 void turnAround()
 {
-  motor.setSpeed(32); //32 = eigth, 64 = quarter, 128 = half, 192 = three-quarter, 255 = full
+  //motor.setSpeed(64); //32 = eigth, 64 = quarter, 128 = half, 192 = three-quarter, 255 = full
   delay(500);
   servoReverse.write(20);
   backLeftDistance = float(hcsr04MiddleRear.ping_median(2));
@@ -185,44 +190,84 @@ void turnAround()
   {
     servoReverse.write(20); //look over left shoulder
     delay(500);
-    
-    do {
-      //nothing (execution code is in while condition.  need to refactor)
+
+    do { //turn wheels left
+      //execution code is in while condition.  need to refactor
     } while (turnLeft());
     delay(500);
-    reverseMotor();
     
+    reverseMotor(); //start backing up until collision detection
     do {
-      backLeftDistance = float(hcsr04MiddleRear.ping_median(2));
-    } while (backLeftDistance > 1000);
+      //getRearDistance();
+    } while (getRearDistance() > 1500);
     stopMotor();
     delay(500);
     
-    do {
-      //nothing (execution code is in condition.  need to refactor)
-    } while (turnRight()); //look right
+    do { //turn wheels right
+      //execution code is in condition.  need to refactor
+    } while (turnRight()); //turn right
     delay(500);
-    driveMotor();
+    
+    driveMotor(); //drive forward
+    do {
+      rightCurrentDistance = getRightDistance();
+    } while (rightCurrentDistance > 1500);
+    stopMotor();
+    delay(500);
+
+    do { //turn wheels left
+      //execution code is in while condition.  need to refactor
+    } while (turnLeft());
+    delay(500);
+
+    reverseMotor(); //start backing up until collision detection
+    do {
+      //getRearDistance();
+    } while (getRearDistance() > 1500);
+    stopMotor();
+    delay(500);
   }
   
   else if(backRightDistance > backLeftDistance) //turn around counter clockwise
   {
     servoReverse.write(160); //look over right shoulder
     delay(500);
-    do { 
-      //nothing (execution code is in condition.  need to refactor)
+
+    do { //turn wheels right
+      //execution code is in while condition.  need to refactor
     } while (turnRight());
     delay(500);
-    reverseMotor();
+    
+    reverseMotor(); //start backing up until collision detection
     do {
-      backRightDistance = float(hcsr04MiddleRear.ping_median(2));
-    } while (backRightDistance > 1000);
+      //getRearDistance();
+    } while (getRearDistance() > 1500);
     stopMotor();
     delay(500);
+    
+    do { //turn wheels left
+      //execution code is in condition.  need to refactor
+    } while (turnLeft()); //turn left
+    delay(500);
+    
+    driveMotor(); //drive forward
     do {
-      //nothing (execution code is in condition.  need to refactor)
-    } while (turnLeft());
-    driveMotor();
+      leftCurrentDistance = getLeftDistance();
+    } while (leftCurrentDistance > 1500);
+    stopMotor();
+    delay(500);
+
+    do { //turn wheels right
+      //execution code is in while condition.  need to refactor
+    } while (turnRight());
+    delay(500);
+
+    reverseMotor(); //start backing up until collision detection
+    do {
+      //getRearDistance();
+    } while (getRearDistance() > 1500);
+    stopMotor();
+    delay(500);
   }
   else
   {
@@ -230,7 +275,11 @@ void turnAround()
     //delay(2000);
   }
   //motor.setSpeed(64);
-  //driveMotor();
+  servoReverse.write(82); //look straight back (rear camera/sonic sensor)
+  delay(500);
+  servoSteering.write(initialAngle);
+  delay(500);
+  driveMotor();
 }
 
 //drive straight
@@ -244,7 +293,7 @@ void driveStraight()
 void loop()
 {
   //GET THIS DISTANCE FIRST
-  if(getFrontDistance() < 1200)
+  if(getFrontDistance() < 1500)
   {
     //stop car and start turn-around process
     stopMotor();
