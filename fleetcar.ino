@@ -7,22 +7,23 @@
 #include <Servo.h>
 #include <NewPing.h>
 
+//max distance for all sensors
 #define maxDistance 200 //200 centimeters = 6.6 feet
-//Right
+//front right sensor
 #define echoPin1 30 // microphone (listening for ping)
 #define trigPin1 31 // speaker (making ping sound)
-//Left
+//front left sensor
 #define echoPin2 32 // microphone (listening for ping)
 #define trigPin2 33 // speaker (making ping sound)
-//Middle Front
+//middle front sensor
 #define echoPin3 34 // microphone (listening for ping)
 #define trigPin3 35 // speaker (making ping sound)
-//Middle Rear
+//middle rear sensor
 #define echoPin4 36 // microphone (listening for ping)
 #define trigPin4 37 // speaker (making ping sound)
-//Turning Servo
+//turning servo (turning wheels)
 #define servoPinSteering 10 // servo control pin
-//Reverse Servo
+//looking servo (rotating back sensor)
 #define servoPinReverse 9 // reverse camera servo
 
 AF_DCMotor motor(1);
@@ -33,62 +34,69 @@ NewPing hcsr04Left(trigPin2, echoPin2, maxDistance);
 NewPing hcsr04MiddleFront(trigPin3, echoPin3, maxDistance);
 NewPing hcsr04MiddleRear(trigPin4, echoPin4, maxDistance);
 
+//front end wheels/servo
 float initialAngle = 90.0; //initial angle of the direction the wheels face (straight ahead)
-float minAngle = 65.0; //lowest angle we'll let the servo turn left (so we don't break the steering column)
-float maxAngle = 115.0; //highest angle we'll let the servo turn right (so we don't break the steering column)
+float minAngle = 69.0; //lowest angle we'll let the servo turn left (so we don't break the steering column)
+float maxAngle = 111.0; //highest angle we'll let the servo turn right (so we don't break the steering column)
 float frontMiddleDistance; //(current) distance from the object directly in front of the vehicle
 float rightDistance = 0.0; //(previous) distance from wall/object to front right wheel
 float leftDistance = 0.0; //(previous) distance from wall/object to front left wheel
 float rightCurrentDistance = 0.0; //(current) distance from wall/object to front left wheel
 float leftCurrentDistance = 0.0; //(current) distance from wall/object to front left wheel
-float reverseDistance = 0.0; //(current) distance from the wall behind the car while backing up (turning around)
 float currentAngle = 0.0; //current angle (when being checked before it is probably moved)
-float backLeftDistance = 0.0; //distance to object when looking back over left shoulder
-float backRightDistance = 0.0; //distance to object when looking back over right shoulder
 const float turnIncrement = 5.0; //the angle amount the steering wheel will turn left or right
 const float deltaThreshold = 60.0; //the distance to set the signicance or willingness to turn.  How much more or less one side has other the other.  This can be changed to increase performance - CAREFUL!
 float distanceTotal = 0.0; //total distance (sum of right and left distances)
-float distanceTolerance = 15.0; //the distance to account for noise (ping echo distance).  Delta between distance and current distance is valid or an error. (the lower the number, more aggressive steering)
+float distanceTolerance = 13.0; //the distance to account for noise (ping echo distance).  Delta between distance and current distance is valid or an error. (the lower the number, more aggressive steering)
 float distanceDelta = 0.0; //the difference between the distances of both sides (i.e.  left tire is 90 and right tire is 110.  the delta is the abs(20) |20|.
 int rightAbsoluteValue = 0; //absolute value of right distance
 int leftAbsoluteValue = 0; //absolute value of left distance
 
+//back camera
+float lookLeftAngle = 25.0; //the angle the rear camera points when looking left (as driver looks over the left shoulder)
+float lookRightAngle = 155.0; //the angle the rear camera points when looking right (as driver looks over the right shoulder)
+float lookStraightBackAngle = 82.0; //the angle the rear camera points when it is look directly backwards
+float reverseDistance = 0.0; //(current) distance from the wall behind the car while backing up (turning around)
+float backLeftDistance = 0.0; //distance to object when looking back over left shoulder
+float backRightDistance = 0.0; //distance to object when looking back over right shoulder
+
+//dc motor - speeds
+int carSpeeds[] = {32, 64, 96, 128, 192, 255}; // 1/8, 1/4, 1/3, 1/2, 3/4, 4/4
+
+//global vars (both front and back sensors)
+const float frontCollisionDistance = 1350.0;
+const float rearCollisionDistance = 500.0;
+
 void setup()
 {
   //delay
-  delay(5000);
+  delay(3000);
 
   //servo - steering
   servoSteering.attach(servoPinSteering);
-  delay(500);
-  servoSteering.write(initialAngle);
-  delay(500);
-
+  
   //distance sensors (right and left)
   //need to add these to a state machine call
   rightDistance = getRightDistance();
+  delay(250);
   leftDistance = getLeftDistance();
 
   //serial port
-  Serial.begin(9600);
+  //Serial.begin(9600);
   
   //delay
-  delay(2000);
+  delay(1000);
 
   //servo - reverse camera
   servoReverse.attach(servoPinReverse);
-  delay(500);
-  servoReverse.write(20); //look over left shoulder (rear camera/sonic sensor)
-  delay(500);
-  servoReverse.write(160); //look over right shoulder (rear camera/sonic sensor)
-  delay(500);
-  servoReverse.write(82); //look straight back (rear camera/sonic sensor)
-
+  lookLeft(); //look over left shoulder (rear camera/sonic sensor)
+  lookRight(); //look over right shoulder (rear camera/sonic sensor)
+  lookStraightBack(); //look straight back 
   delay(1000);
   
   //motor
-  motor.setSpeed(96); //32 = eigth, 64 = quarter, 128 = half, 192 = three-quarter, 255 = full
-  motor.run(RELEASE);
+  motor.setSpeed(carSpeeds[3]); 
+  //motor.run(RELEASE);
   
   //run the car forward until something good or bad happens
   driveMotor();
@@ -143,7 +151,7 @@ bool turnRight()
 {
   currentAngle = servoSteering.read();
   float moveAngle = (currentAngle - turnIncrement);
-  if (moveAngle > 69)
+  if (moveAngle > minAngle)
   {
     servoSteering.write(moveAngle);
     delay(35); //let motor take time to get to the new position
@@ -160,7 +168,7 @@ bool turnLeft()
 {
   currentAngle = servoSteering.read();
   float moveAngle = (currentAngle + turnIncrement);
-  if (moveAngle < 111)
+  if (moveAngle < maxAngle)
   {
     servoSteering.write(moveAngle);
     delay(35); //let motor take time to get to the new position
@@ -172,24 +180,40 @@ bool turnLeft()
   }
 }
 
+bool lookLeft()
+{
+  servoReverse.write(lookLeftAngle);
+  delay(600);
+  return true;
+}
+
+bool lookRight()
+{
+  servoReverse.write(lookRightAngle);
+  delay(600);
+  return true;
+}
+
+bool lookStraightBack()
+{
+  servoReverse.write(lookStraightBackAngle);
+  delay(600);
+  return true;
+}
+
 //check blind spots and then turn around
 void turnAround()
 {
-  //motor.setSpeed(64); //32 = eigth, 64 = quarter, 128 = half, 192 = three-quarter, 255 = full
-  delay(500);
-  servoReverse.write(20);
+  lookLeft();
   backLeftDistance = float(hcsr04MiddleRear.ping_median(2));
-  delay(500);
-  servoReverse.write(160);
-  backRightDistance = float(hcsr04MiddleRear.ping_median(2));
-  delay(500);
-  servoReverse.write(82);
-  delay(500);
   
-  if(backLeftDistance > backRightDistance) //turn around clockwise
+  lookRight();
+  backRightDistance = float(hcsr04MiddleRear.ping_median(2));
+  
+  lookStraightBack();
+  if(backLeftDistance > backRightDistance) //turn around clockwise (because you can backup to your left with more space)
   {
-    servoReverse.write(20); //look over left shoulder
-    delay(500);
+    lookLeft(); //look over left shoulder
 
     do { //turn wheels left
       //execution code is in while condition.  need to refactor
@@ -198,8 +222,8 @@ void turnAround()
     
     reverseMotor(); //start backing up until collision detection
     do {
-      //getRearDistance();
-    } while (getRearDistance() > 1500);
+      backLeftDistance = getRearDistance();
+    } while (backLeftDistance > rearCollisionDistance);
     stopMotor();
     delay(500);
     
@@ -211,7 +235,7 @@ void turnAround()
     driveMotor(); //drive forward
     do {
       rightCurrentDistance = getRightDistance();
-    } while (rightCurrentDistance > 1500);
+    } while (rightCurrentDistance > frontCollisionDistance);
     stopMotor();
     delay(500);
 
@@ -221,16 +245,16 @@ void turnAround()
     delay(500);
 
     reverseMotor(); //start backing up until collision detection
-    do {
-      //getRearDistance();
-    } while (getRearDistance() > 1500);
+    do { 
+      backLeftDistance = getRearDistance();
+    } while (backLeftDistance > rearCollisionDistance);
     stopMotor();
     delay(500);
   }
   
   else if(backRightDistance > backLeftDistance) //turn around counter clockwise
   {
-    servoReverse.write(160); //look over right shoulder
+    servoReverse.write(lookRightAngle); //look over right shoulder
     delay(500);
 
     do { //turn wheels right
@@ -241,7 +265,7 @@ void turnAround()
     reverseMotor(); //start backing up until collision detection
     do {
       //getRearDistance();
-    } while (getRearDistance() > 1500);
+    } while (getRearDistance() > rearCollisionDistance);
     stopMotor();
     delay(500);
     
@@ -253,7 +277,7 @@ void turnAround()
     driveMotor(); //drive forward
     do {
       leftCurrentDistance = getLeftDistance();
-    } while (leftCurrentDistance > 1500);
+    } while (leftCurrentDistance > frontCollisionDistance);
     stopMotor();
     delay(500);
 
@@ -265,7 +289,7 @@ void turnAround()
     reverseMotor(); //start backing up until collision detection
     do {
       //getRearDistance();
-    } while (getRearDistance() > 1500);
+    } while (getRearDistance() > rearCollisionDistance);
     stopMotor();
     delay(500);
   }
@@ -274,7 +298,6 @@ void turnAround()
     //reverseMotor();
     //delay(2000);
   }
-  //motor.setSpeed(64);
   servoReverse.write(82); //look straight back (rear camera/sonic sensor)
   delay(500);
   servoSteering.write(initialAngle);
@@ -292,8 +315,8 @@ void driveStraight()
 
 void loop()
 {
-  //GET THIS DISTANCE FIRST
-  if(getFrontDistance() < 1500)
+  //GET THIS DISTANCE FIRST (all 3 front sensors)
+  if(getFrontDistance() < frontCollisionDistance)
   {
     //stop car and start turn-around process
     stopMotor();
@@ -310,12 +333,11 @@ void loop()
   distanceDelta = abs(rightCurrentDistance - leftCurrentDistance); //absolute value of the difference between the left and right sides
   distanceTotal = rightCurrentDistance + leftCurrentDistance; //sum of the left and right distance
   
-  //if (distanceTotal < 1600) //get rid of noise.  large distances when the agent is not on a track (how far we look out to the sides)
   rightAbsoluteValue = abs(rightCurrentDistance - rightDistance);
   leftAbsoluteValue = abs(leftCurrentDistance - leftDistance);
   if ((rightAbsoluteValue < distanceTolerance) && (leftAbsoluteValue < distanceTolerance))
   {
-    //do nothing.  distance didn't change so DO NOT TURN THE STEERING WHEELS.  You're probably good.
+    //do nothing.  distance didn't change on both sides so DO NOT TURN THE STEERING WHEELS.  You're probably good.
   }
   else if(distanceDelta < 125.0)
   {
