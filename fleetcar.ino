@@ -21,6 +21,8 @@
 //middle rear sensor
 #define echoPin4 36 // microphone (listening for ping)
 #define trigPin4 37 // speaker (making ping sound)
+//front right IR sensor
+#define isObstaclePin 40 //
 //turning servo (turning wheels)
 #define servoPinSteering 10 // servo control pin
 //looking servo (rotating back sensor)
