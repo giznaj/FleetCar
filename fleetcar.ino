@@ -7,40 +7,42 @@
 #include <Servo.h>
 #include <NewPing.h>
 
-//max distance for all sensors
-#define maxDistance 200 //200 centimeters = 6.6 feet
-//front right sensor
-#define echoPin1 30 // microphone (listening for ping)
-#define trigPin1 31 // speaker (making ping sound)
-//front left sensor
-#define echoPin2 32 // microphone (listening for ping)
-#define trigPin2 33 // speaker (making ping sound)
-//middle front sensor
-#define echoPin3 34 // microphone (listening for ping)
-#define trigPin3 35 // speaker (making ping sound)
-//middle rear sensor
-#define echoPin4 36 // microphone (listening for ping)
-#define trigPin4 37 // speaker (making ping sound)
-//front right IR sensor
-#define isObstaclePin 40 //
-//turning servo (turning wheels)
-#define servoPinSteering 10 // servo control pin
-//looking servo (rotating back sensor)
-#define servoPinReverse 9 // reverse camera servo
+//ultrasonic sensors - max distance for all sensors
+#define maxDistance 400 //200 centimeters = 6.6 feet
 
-AF_DCMotor motor(1);
-Servo servoSteering;
-Servo servoReverse;
-NewPing hcsr04Right(trigPin1, echoPin1, maxDistance);
-NewPing hcsr04Left(trigPin2, echoPin2, maxDistance);
-NewPing hcsr04MiddleFront(trigPin3, echoPin3, maxDistance);
-NewPing hcsr04MiddleRear(trigPin4, echoPin4, maxDistance);
+//front right ultrasonic sensor
+#define echoPin1 30 //microphone (listening for ping)
+#define trigPin1 31 //speaker (making ping sound)
+
+//front left ultrasonicsensor
+#define echoPin2 32 //microphone (listening for ping)
+#define trigPin2 33 // speaker (making ping sound)
+
+//middle rear ultrasonic sensor
+#define echoPin4 34 //microphone (listening for ping)
+#define trigPin4 35 //speaker (making ping sound)
+
+//ir sensors (looking out the car from the driver's seat)
+#define pinLeftLeft 40 //left left IR sensor
+#define pinLeftCentre 42 //left centre IR sensor
+#define pinRightCentre 44 //right centre IR sensor
+#define pinRightRight 46 //right right IR sensor
+
+//servos
+#define servoPinSteering 10 //turning servo (front wheels)
+#define servoPinReverse 9 //reverse camera/ultrasonic servo
+
+AF_DCMotor motor(1); //driving motor (back wheels)
+Servo servoSteering; //steering servo
+Servo servoReverse; //reverse camera/ultrasonic sensory
+NewPing hcsr04Right(trigPin1, echoPin1, maxDistance); //front right ultrasonic sensor
+NewPing hcsr04Left(trigPin2, echoPin2, maxDistance); //front left ultrasonic sensor
+NewPing hcsr04MiddleRear(trigPin4, echoPin4, maxDistance); //back ultrasonic sensor
 
 //front end wheels/servo
 float initialAngle = 90.0; //initial angle of the direction the wheels face (straight ahead)
 float minAngle = 69.0; //lowest angle we'll let the servo turn left (so we don't break the steering column)
 float maxAngle = 111.0; //highest angle we'll let the servo turn right (so we don't break the steering column)
-float frontMiddleDistance; //(current) distance from the object directly in front of the vehicle
 float rightDistance = 0.0; //(previous) distance from wall/object to front right wheel
 float leftDistance = 0.0; //(previous) distance from wall/object to front left wheel
 float rightCurrentDistance = 0.0; //(current) distance from wall/object to front left wheel
@@ -54,6 +56,9 @@ float distanceDelta = 0.0; //the difference between the distances of both sides 
 int rightAbsoluteValue = 0; //absolute value of right distance
 int leftAbsoluteValue = 0; //absolute value of left distance
 
+//front IR sensor - //HIGH - means no obstacle in view //LOW - means there is an obstacle in view. HIGH == 1, LOW == 0
+int isObjectThere = 1;
+
 //back camera
 float lookLeftAngle = 25.0; //the angle the rear camera points when looking left (as driver looks over the left shoulder)
 float lookRightAngle = 155.0; //the angle the rear camera points when looking right (as driver looks over the right shoulder)
@@ -64,28 +69,34 @@ float backRightDistance = 0.0; //distance to object when looking back over right
 
 //dc motor - speeds
 int carSpeeds[] = {32, 64, 96, 128, 192, 255}; // 1/8, 1/4, 1/3, 1/2, 3/4, 4/4
+int iRList[4] = {1, 1, 1, 1}; //HIGH = no object, LOW = object 1 = HIGH, 0 = LOW
 
 //global vars (both front and back sensors)
-const float frontCollisionDistance = 1350.0;
-const float rearCollisionDistance = 500.0;
+const float rearCollisionDistance = 350.0;
+const float frontCollisionDistance = 300.0;
 
 void setup()
 {
+  Serial.begin(9600);
+  Serial.print("MTO AI Fleet Car");
+  
   //delay
   delay(3000);
 
+  //obstacle detection IR
+  pinMode(pinLeftLeft, INPUT);
+  pinMode(pinLeftCentre, INPUT);
+  pinMode(pinRightCentre, INPUT);
+  pinMode(pinRightRight, INPUT);
+  
   //servo - steering
   servoSteering.attach(servoPinSteering);
   
-  //distance sensors (right and left)
-  //need to add these to a state machine call
+  //distance sensors (right and left).  need to add these to a state machine call
   rightDistance = getRightDistance();
   delay(250);
   leftDistance = getLeftDistance();
 
-  //serial port
-  //Serial.begin(9600);
-  
   //delay
   delay(1000);
 
@@ -97,18 +108,29 @@ void setup()
   delay(1000);
   
   //motor
-  motor.setSpeed(carSpeeds[3]); 
-  //motor.run(RELEASE);
+  motor.setSpeed(carSpeeds[1]); 
   
   //run the car forward until something good or bad happens
   driveMotor();
 }
 
-//get the distance from the wall (Right side of car)
-float getFrontDistance()
+int getIsObstacleThere()
 {
-  frontMiddleDistance = float(hcsr04MiddleFront.ping_median(2));
-  return frontMiddleDistance;
+  isObjectThere = 1;
+  iRList[0] = digitalRead(pinLeftLeft);
+  iRList[1] = digitalRead(pinLeftCentre);
+  iRList[2] = digitalRead(pinRightCentre);
+  iRList[3] = digitalRead(pinRightRight);
+  for (int counter = 0; counter < 4; counter++)
+  {
+    Serial.print(iRList[counter]);
+    Serial.println();
+    if(iRList[counter] == 0)
+    {
+      isObjectThere = 0;
+    }
+  }
+  return isObjectThere;
 }
 
 //get the distance from the wall (Right side of car)
@@ -206,6 +228,9 @@ bool lookStraightBack()
 //check blind spots and then turn around
 void turnAround()
 {
+  //{32, 64, 96, 128, 192, 255}; // 1/8, 1/4, 1/3, 1/2, 3/4, 4/4
+  motor.setSpeed(carSpeeds[1]);
+  
   lookLeft();
   backLeftDistance = float(hcsr04MiddleRear.ping_median(2));
   
@@ -237,7 +262,7 @@ void turnAround()
     driveMotor(); //drive forward
     do {
       rightCurrentDistance = getRightDistance();
-    } while (rightCurrentDistance > frontCollisionDistance);
+    } while (getIsObstacleThere() == 1);
     stopMotor();
     delay(500);
 
@@ -279,7 +304,7 @@ void turnAround()
     driveMotor(); //drive forward
     do {
       leftCurrentDistance = getLeftDistance();
-    } while (leftCurrentDistance > frontCollisionDistance);
+    } while (getIsObstacleThere() == 1);
     stopMotor();
     delay(500);
 
@@ -317,8 +342,8 @@ void driveStraight()
 
 void loop()
 {
-  //GET THIS DISTANCE FIRST (all 3 front sensors)
-  if(getFrontDistance() < frontCollisionDistance)
+  //check IR sensors for an object
+  if (getIsObstacleThere() == 0 ) //object is in front of car
   {
     //stop car and start turn-around process
     stopMotor();
@@ -326,10 +351,7 @@ void loop()
   }
   else
   {
-    //driveMotor();
-  }
-  
-  //need to add these to a state machine call
+    //need to add these to a state machine call
   rightCurrentDistance = getRightDistance(); //get the current distance (right side)
   leftCurrentDistance = getLeftDistance(); //get the current distance (left side)
   distanceDelta = abs(rightCurrentDistance - leftCurrentDistance); //absolute value of the difference between the left and right sides
@@ -359,4 +381,5 @@ void loop()
     rightDistance = rightCurrentDistance;
   }
   delay(65);
+  }
 }
