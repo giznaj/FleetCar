@@ -8,7 +8,7 @@
 #include <NewPing.h>
 
 //ultrasonic sensors - max distance for all sensors
-#define maxDistance 400 //200 centimeters = 6.6 feet
+#define maxDistance 300 //200 centimeters = 6.6 feet
 
 //front right ultrasonic sensor
 #define echoPin1 30 //microphone (listening for ping)
@@ -68,17 +68,18 @@ float backLeftDistance = 0.0; //distance to object when looking back over left s
 float backRightDistance = 0.0; //distance to object when looking back over right shoulder
 
 //dc motor - speeds
-int carSpeeds[] = {32, 64, 96, 128, 192, 255}; // 1/8, 1/4, 1/3, 1/2, 3/4, 4/4
+int carSpeeds[9] = {32, 48, 64, 72, 80, 96, 128, 192, 255}; // 1/8, 1/6, 1/4, ?, 1/3, 1/2, 3/4, 4/4
 int iRList[4] = {1, 1, 1, 1}; //HIGH = no object, LOW = object 1 = HIGH, 0 = LOW
 
 //global vars (both front and back sensors)
-const float rearCollisionDistance = 350.0;
+const float rearCollisionDistance = 1100.0;
 const float frontCollisionDistance = 300.0;
 
 void setup()
 {
   Serial.begin(9600);
   Serial.print("MTO AI Fleet Car");
+  Serial.println();
   
   //delay
   delay(3000);
@@ -108,7 +109,7 @@ void setup()
   delay(1000);
   
   //motor
-  motor.setSpeed(carSpeeds[1]); 
+  motor.setSpeed(carSpeeds[4]); 
   
   //run the car forward until something good or bad happens
   driveMotor();
@@ -123,8 +124,8 @@ int getIsObstacleThere()
   iRList[3] = digitalRead(pinRightRight);
   for (int counter = 0; counter < 4; counter++)
   {
-    Serial.print(iRList[counter]);
-    Serial.println();
+    //Serial.print(iRList[counter]);
+    //Serial.println();
     if(iRList[counter] == 0)
     {
       isObjectThere = 0;
@@ -228,8 +229,7 @@ bool lookStraightBack()
 //check blind spots and then turn around
 void turnAround()
 {
-  //{32, 64, 96, 128, 192, 255}; // 1/8, 1/4, 1/3, 1/2, 3/4, 4/4
-  motor.setSpeed(carSpeeds[1]);
+  //motor.setSpeed(carSpeeds[3]);
   
   lookLeft();
   backLeftDistance = float(hcsr04MiddleRear.ping_median(2));
@@ -342,6 +342,12 @@ void driveStraight()
 
 void loop()
 {
+  //need to add these to a state machine call
+  rightCurrentDistance = getRightDistance(); //get the current distance (right side)
+  leftCurrentDistance = getLeftDistance(); //get the current distance (left side)
+  distanceDelta = abs(rightCurrentDistance - leftCurrentDistance); //absolute value of the difference between the left and right sides
+  Serial.print(distanceDelta);
+  Serial.println();
   //check IR sensors for an object
   if (getIsObstacleThere() == 0 ) //object is in front of car
   {
@@ -349,23 +355,9 @@ void loop()
     stopMotor();
     turnAround();
   }
-  else
+  else if(distanceDelta < 60.0)
   {
-    //need to add these to a state machine call
-  rightCurrentDistance = getRightDistance(); //get the current distance (right side)
-  leftCurrentDistance = getLeftDistance(); //get the current distance (left side)
-  distanceDelta = abs(rightCurrentDistance - leftCurrentDistance); //absolute value of the difference between the left and right sides
-  distanceTotal = rightCurrentDistance + leftCurrentDistance; //sum of the left and right distance
-  
-  rightAbsoluteValue = abs(rightCurrentDistance - rightDistance);
-  leftAbsoluteValue = abs(leftCurrentDistance - leftDistance);
-  if ((rightAbsoluteValue < distanceTolerance) && (leftAbsoluteValue < distanceTolerance))
-  {
-    //do nothing.  distance didn't change on both sides so DO NOT TURN THE STEERING WHEELS.  You're probably good.
-  }
-  else if(distanceDelta < 125.0)
-  {
-    //do nothing.  the difference in distance from walls on both sides is close.  Don't change it if it aint broke.
+    
   }
   else
   {
@@ -373,13 +365,17 @@ void loop()
     {
       turnLeft();
     }
-    else
+    else if (rightCurrentDistance >leftCurrentDistance)
     {
       turnRight();
     }
+    else
+    {
+      
+    }
+    
     leftDistance = leftCurrentDistance;
     rightDistance = rightCurrentDistance;
-  }
-  delay(65);
+    delay(15);
   }
 }
