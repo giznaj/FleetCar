@@ -1,5 +1,7 @@
 /*
   FLEET CAR (TBD)
+  ## NOTES ##
+  # Car works the best in an environment that is white
   POC
 */
 
@@ -69,6 +71,7 @@ float backRightDistance = 0.0; //distance to object when looking back over right
 
 //dc motor - speeds
 int carSpeeds[9] = {32, 48, 64, 72, 80, 96, 128, 192, 255}; // 1/8, 1/6, 1/4, ?, 1/3, 1/2, 3/4, 4/4
+int carGear = 5;
 int iRList[4] = {1, 1, 1, 1}; //HIGH = no object, LOW = object 1 = HIGH, 0 = LOW
 
 //global vars (both front and back sensors)
@@ -109,8 +112,7 @@ void setup()
   delay(1000);
   
   //motor
-  motor.setSpeed(carSpeeds[4]); 
-  
+  motor.setSpeed(carSpeeds[carGear]); 
   //run the car forward until something good or bad happens
   driveMotor();
 }
@@ -229,7 +231,8 @@ bool lookStraightBack()
 //check blind spots and then turn around
 void turnAround()
 {
-  //motor.setSpeed(carSpeeds[3]);
+  carGear = 5;
+  motor.setSpeed(carSpeeds[carGear]);
   
   lookLeft();
   backLeftDistance = float(hcsr04MiddleRear.ping_median(2));
@@ -332,22 +335,28 @@ void turnAround()
   driveMotor();
 }
 
-//drive straight
-void driveStraight()
+//gear down
+void gearDown()
 {
-  currentAngle = servoSteering.read();
-  servoSteering.write(initialAngle);
-  delay(45); //let motor take time to get to the new position
+  if(carGear > 2)
+  {
+    carGear = carGear-1;
+    motor.setSpeed(carSpeeds[carGear]);
+    delay(45);
+  }
 }
 
 void loop()
 {
+  Serial.print(carGear);
+  if(carGear > 2)
+  {
+    gearDown();
+  }
   //need to add these to a state machine call
   rightCurrentDistance = getRightDistance(); //get the current distance (right side)
   leftCurrentDistance = getLeftDistance(); //get the current distance (left side)
   distanceDelta = abs(rightCurrentDistance - leftCurrentDistance); //absolute value of the difference between the left and right sides
-  Serial.print(distanceDelta);
-  Serial.println();
   //check IR sensors for an object
   if (getIsObstacleThere() == 0 ) //object is in front of car
   {
@@ -365,7 +374,7 @@ void loop()
     {
       turnLeft();
     }
-    else if (rightCurrentDistance >leftCurrentDistance)
+    else if (rightCurrentDistance > leftCurrentDistance)
     {
       turnRight();
     }
