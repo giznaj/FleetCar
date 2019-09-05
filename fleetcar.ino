@@ -342,13 +342,13 @@ void gearDown()
   {
     carGear = carGear-1;
     motor.setSpeed(carSpeeds[carGear]);
-    delay(45);
+    //delay(45);
   }
 }
 
 void loop()
 {
-  Serial.print(carGear);
+  //Serial.print(carGear);
   if(carGear > 2)
   {
     gearDown();
