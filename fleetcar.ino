@@ -25,10 +25,11 @@
 #define trigPin4 35 //speaker (making ping sound)
 
 //ir sensors (looking out the car from the driver's seat)
-#define pinLeftLeft 40 //left left IR sensor
-#define pinLeftCentre 42 //left centre IR sensor
-#define pinRightCentre 44 //right centre IR sensor
+#define pinLeftLeft 40 //front left IR sensor
+#define pinLeftCentre 42 //front centre IR sensor
+#define pinRightCentre 44 //front right centre IR sensor
 #define pinRightRight 46 //right right IR sensor
+#define pinRearLeft 48//rear left IR sensor
 
 //servos
 #define servoPinSteering 10 //turning servo (front wheels)
@@ -70,12 +71,15 @@ float backLeftDistance = 0.0; //distance to object when looking back over left s
 float backRightDistance = 0.0; //distance to object when looking back over right shoulder
 
 //dc motor - speeds
-int carSpeeds[9] = {32, 48, 64, 72, 80, 96, 128, 192, 255}; // 1/8, 1/6, 1/4, ?, 1/3, 1/2, 3/4, 4/4
-int carGear = 5;
+int carSpeeds[16] = {16, 32, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192, 208, 224, 240, 255};
+int carGearFwd = 10; 
+int carGearRev = 10;
+int carGear = 10;
+int gearCounter = 0;
 int iRList[4] = {1, 1, 1, 1}; //HIGH = no object, LOW = object 1 = HIGH, 0 = LOW
 
 //global vars (both front and back sensors)
-const float rearCollisionDistance = 1100.0;
+const float rearCollisionDistance = 900.0;
 const float frontCollisionDistance = 300.0;
 
 void setup()
@@ -92,6 +96,7 @@ void setup()
   pinMode(pinLeftCentre, INPUT);
   pinMode(pinRightCentre, INPUT);
   pinMode(pinRightRight, INPUT);
+  pinMode(pinRearLeft, INPUT);
   
   //servo - steering
   servoSteering.attach(servoPinSteering);
@@ -112,11 +117,13 @@ void setup()
   delay(1000);
   
   //motor
-  motor.setSpeed(carSpeeds[carGear]); 
+  motor.setSpeed(carSpeeds[carGearFwd]); 
   //run the car forward until something good or bad happens
   driveMotor();
 }
 
+//checks to see if there is an object in front of the IR sensors
+//HIGH - means no obstacle in view //LOW - means there is an obstacle in view. HIGH == 1, LOW == 0
 int getIsObstacleThere()
 {
   isObjectThere = 1;
@@ -124,7 +131,8 @@ int getIsObstacleThere()
   iRList[1] = digitalRead(pinLeftCentre);
   iRList[2] = digitalRead(pinRightCentre);
   iRList[3] = digitalRead(pinRightRight);
-  for (int counter = 0; counter < 4; counter++)
+  iRList[4] = digitalRead(pinRearLeft);
+  for (int counter = 0; counter < 5; counter++)
   {
     //Serial.print(iRList[counter]);
     //Serial.println();
@@ -231,8 +239,7 @@ bool lookStraightBack()
 //check blind spots and then turn around
 void turnAround()
 {
-  carGear = 5;
-  motor.setSpeed(carSpeeds[carGear]);
+  motor.setSpeed(carSpeeds[carGearRev]);
   
   lookLeft();
   backLeftDistance = float(hcsr04MiddleRear.ping_median(2));
@@ -338,20 +345,20 @@ void turnAround()
 //gear down
 void gearDown()
 {
-  if(carGear > 2)
+  if(carGearFwd > 8)
   {
-    carGear = carGear-1;
-    motor.setSpeed(carSpeeds[carGear]);
-    delay(45);
+    carGearFwd = carGearFwd-1;
+    motor.setSpeed(carSpeeds[carGearFwd]);
+    delay(15);
   }
 }
 
 void loop()
 {
-  Serial.print(carGear);
-  if(carGear > 2)
+  if(gearCounter == 5)
   {
     gearDown();
+    gearCounter = 0;
   }
   //need to add these to a state machine call
   rightCurrentDistance = getRightDistance(); //get the current distance (right side)
@@ -366,7 +373,7 @@ void loop()
   }
   else if(distanceDelta < 60.0)
   {
-    
+    //do nothing for now
   }
   else
   {
@@ -380,11 +387,12 @@ void loop()
     }
     else
     {
-      
+      //do nothing for now      
     }
     
     leftDistance = leftCurrentDistance;
     rightDistance = rightCurrentDistance;
     delay(15);
   }
+  gearCounter = gearCounter+1;
 }
