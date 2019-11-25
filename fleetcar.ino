@@ -61,6 +61,7 @@ int leftAbsoluteValue = 0; //absolute value of left distance
 
 //front IR sensor - //HIGH - means no obstacle in view //LOW - means there is an obstacle in view. HIGH == 1, LOW == 0
 int isObjectThere = 1;
+int isObjectBehind = 1;
 
 //back camera
 float lookLeftAngle = 25.0; //the angle the rear camera points when looking left (as driver looks over the left shoulder)
@@ -122,8 +123,9 @@ void setup()
   driveMotor();
 }
 
-//checks to see if there is an object in front of the IR sensors
+//checks to see if there is an object in front of the IR sensors (in front of car)
 //HIGH - means no obstacle in view //LOW - means there is an obstacle in view. HIGH == 1, LOW == 0
+//this method only checks the front 3 IR sensors when moving forward
 int getIsObstacleThere()
 {
   isObjectThere = 1;
@@ -132,7 +134,7 @@ int getIsObstacleThere()
   iRList[2] = digitalRead(pinRightCentre);
   iRList[3] = digitalRead(pinRightRight);
   iRList[4] = digitalRead(pinRearLeft);
-  for (int counter = 0; counter < 5; counter++)
+  for (int counter = 0; counter < 3; counter++)
   {
     //Serial.print(iRList[counter]);
     //Serial.println();
@@ -142,6 +144,29 @@ int getIsObstacleThere()
     }
   }
   return isObjectThere;
+}
+
+//checks to see if there is an object in front of the IR sensors (behind car)
+//HIGH - means no obstacle in view //LOW - means there is an obstacle in view. HIGH == 1, LOW == 0
+//this method only checks the back 2 IR sensors when moving reverse
+int getIsObstacleBehind()
+{
+  isObjectBehind = 1;
+  iRList[0] = digitalRead(pinLeftLeft);
+  iRList[1] = digitalRead(pinLeftCentre);
+  iRList[2] = digitalRead(pinRightCentre);
+  iRList[3] = digitalRead(pinRightRight);
+  iRList[4] = digitalRead(pinRearLeft);
+  for (int counter = 3; counter < 5; counter++)
+  {
+    //Serial.print(iRList[counter]);
+    //Serial.println();
+    if(iRList[counter] == 0)
+    {
+      isObjectThere = 0;
+    }
+  }
+  return isObjectBehind;
 }
 
 //get the distance from the wall (Right side of car)
@@ -248,7 +273,7 @@ void turnAround()
   backRightDistance = float(hcsr04MiddleRear.ping_median(2));
   
   lookStraightBack();
-  if(backLeftDistance > backRightDistance) //turn around clockwise (because you can backup to your left with more space)
+  if(backLeftDistance > backRightDistance) //turn around clockwise (because there is more space behind back left - when reversing)
   {
     lookLeft(); //look over left shoulder
 
@@ -259,8 +284,7 @@ void turnAround()
     
     reverseMotor(); //start backing up until collision detection
     do {
-      backLeftDistance = getRearDistance();
-    } while (backLeftDistance > rearCollisionDistance);
+    } while (isObjectBehind == 1);
     stopMotor();
     delay(500);
     
@@ -283,8 +307,7 @@ void turnAround()
 
     reverseMotor(); //start backing up until collision detection
     do { 
-      backLeftDistance = getRearDistance();
-    } while (backLeftDistance > rearCollisionDistance);
+    } while (isObjectBehind == 1);
     stopMotor();
     delay(500);
   }
@@ -301,8 +324,7 @@ void turnAround()
     
     reverseMotor(); //start backing up until collision detection
     do {
-      //getRearDistance();
-    } while (getRearDistance() > rearCollisionDistance);
+    } while (getIsObstacleThere() == 1);
     stopMotor();
     delay(500);
     
@@ -325,8 +347,7 @@ void turnAround()
 
     reverseMotor(); //start backing up until collision detection
     do {
-      //getRearDistance();
-    } while (getRearDistance() > rearCollisionDistance);
+    } while (getIsObstacleThere() == 1);
     stopMotor();
     delay(500);
   }
@@ -347,26 +368,15 @@ void gearDown()
 {
   if(carGearFwd > 8)
   {
-<<<<<<< HEAD
     carGearFwd = carGearFwd-1;
     motor.setSpeed(carSpeeds[carGearFwd]);
     delay(15);
-=======
-    carGear = carGear-1;
-    motor.setSpeed(carSpeeds[carGear]);
-    //delay(45);
->>>>>>> 69cd0d487ed17b9d7c88b05e587b4e9f8db6cb04
   }
 }
 
 void loop()
 {
-<<<<<<< HEAD
   if(gearCounter == 5)
-=======
-  //Serial.print(carGear);
-  if(carGear > 2)
->>>>>>> 69cd0d487ed17b9d7c88b05e587b4e9f8db6cb04
   {
     gearDown();
     gearCounter = 0;
