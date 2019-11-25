@@ -347,15 +347,26 @@ void gearDown()
 {
   if(carGearFwd > 8)
   {
+<<<<<<< HEAD
     carGearFwd = carGearFwd-1;
     motor.setSpeed(carSpeeds[carGearFwd]);
     delay(15);
+=======
+    carGear = carGear-1;
+    motor.setSpeed(carSpeeds[carGear]);
+    //delay(45);
+>>>>>>> 69cd0d487ed17b9d7c88b05e587b4e9f8db6cb04
   }
 }
 
 void loop()
 {
+<<<<<<< HEAD
   if(gearCounter == 5)
+=======
+  //Serial.print(carGear);
+  if(carGear > 2)
+>>>>>>> 69cd0d487ed17b9d7c88b05e587b4e9f8db6cb04
   {
     gearDown();
     gearCounter = 0;
