@@ -25,10 +25,10 @@
 #define trigPin4 35 //speaker (making ping sound)
 
 //ir sensors (looking out the car from the driver's seat)
-#define pinLeftLeft 40 //front left IR sensor
-#define pinLeftCentre 42 //front centre IR sensor
-#define pinRightCentre 44 //front right centre IR sensor
-#define pinRightRight 46 //right right IR sensor
+#define pinFrontLeft 40 //front left IR sensor
+#define pinFrontCentre 42 //front centre IR sensor
+#define pinFrontRight 44 //front right IR sensor
+#define pinRearRight 46 //rear right IR sensor
 #define pinRearLeft 48//rear left IR sensor
 
 //servos
@@ -60,7 +60,7 @@ int rightAbsoluteValue = 0; //absolute value of right distance
 int leftAbsoluteValue = 0; //absolute value of left distance
 
 //front IR sensor - //HIGH - means no obstacle in view //LOW - means there is an obstacle in view. HIGH == 1, LOW == 0
-int isObjectThere = 1;
+int isObjectInFront = 1;
 int isObjectBehind = 1;
 
 //back camera
@@ -93,10 +93,10 @@ void setup()
   delay(3000);
 
   //obstacle detection IR
-  pinMode(pinLeftLeft, INPUT);
-  pinMode(pinLeftCentre, INPUT);
-  pinMode(pinRightCentre, INPUT);
-  pinMode(pinRightRight, INPUT);
+  pinMode(pinFrontLeft, INPUT);
+  pinMode(pinFrontCentre, INPUT);
+  pinMode(pinFrontRight, INPUT);
+  pinMode(pinRearRight, INPUT);
   pinMode(pinRearLeft, INPUT);
   
   //servo - steering
@@ -126,24 +126,22 @@ void setup()
 //checks to see if there is an object in front of the IR sensors (in front of car)
 //HIGH - means no obstacle in view //LOW - means there is an obstacle in view. HIGH == 1, LOW == 0
 //this method only checks the front 3 IR sensors when moving forward
-int getIsObstacleThere()
+int getIsObstacleInFront()
 {
-  isObjectThere = 1;
-  iRList[0] = digitalRead(pinLeftLeft);
-  iRList[1] = digitalRead(pinLeftCentre);
-  iRList[2] = digitalRead(pinRightCentre);
-  iRList[3] = digitalRead(pinRightRight);
-  iRList[4] = digitalRead(pinRearLeft);
+  isObjectInFront = 1;
+  iRList[0] = digitalRead(pinFrontLeft);
+  iRList[1] = digitalRead(pinFrontCentre);
+  iRList[2] = digitalRead(pinFrontRight);
+  //iRList[3] = digitalRead(pinRightRight);
+  //iRList[4] = digitalRead(pinRearLeft);
   for (int counter = 0; counter < 3; counter++)
   {
-    //Serial.print(iRList[counter]);
-    //Serial.println();
     if(iRList[counter] == 0)
     {
-      isObjectThere = 0;
+      isObjectInFront = 0;
     }
   }
-  return isObjectThere;
+  return isObjectInFront;
 }
 
 //checks to see if there is an object in front of the IR sensors (behind car)
@@ -152,18 +150,16 @@ int getIsObstacleThere()
 int getIsObstacleBehind()
 {
   isObjectBehind = 1;
-  iRList[0] = digitalRead(pinLeftLeft);
-  iRList[1] = digitalRead(pinLeftCentre);
-  iRList[2] = digitalRead(pinRightCentre);
-  iRList[3] = digitalRead(pinRightRight);
+  //iRList[0] = digitalRead(pinFrontLeft);
+  //iRList[1] = digitalRead(pinFrontCentre);
+  //iRList[2] = digitalRead(pinFrontRight);
+  iRList[3] = digitalRead(pinRearRight);
   iRList[4] = digitalRead(pinRearLeft);
   for (int counter = 3; counter < 5; counter++)
   {
-    //Serial.print(iRList[counter]);
-    //Serial.println();
     if(iRList[counter] == 0)
     {
-      isObjectThere = 0;
+      isObjectBehind = 0;
     }
   }
   return isObjectBehind;
@@ -273,10 +269,10 @@ void turnAround()
   backRightDistance = float(hcsr04MiddleRear.ping_median(2));
   
   lookStraightBack();
+  
   if(backLeftDistance > backRightDistance) //turn around clockwise (because there is more space behind back left - when reversing)
   {
     lookLeft(); //look over left shoulder
-
     do { //turn wheels left
       //execution code is in while condition.  need to refactor
     } while (turnLeft());
@@ -284,7 +280,7 @@ void turnAround()
     
     reverseMotor(); //start backing up until collision detection
     do {
-    } while (isObjectBehind == 1);
+    } while (getIsObstacleBehind() == 1);
     stopMotor();
     delay(500);
     
@@ -296,7 +292,7 @@ void turnAround()
     driveMotor(); //drive forward
     do {
       rightCurrentDistance = getRightDistance();
-    } while (getIsObstacleThere() == 1);
+    } while (getIsObstacleInFront() == 1);
     stopMotor();
     delay(500);
 
@@ -307,7 +303,7 @@ void turnAround()
 
     reverseMotor(); //start backing up until collision detection
     do { 
-    } while (isObjectBehind == 1);
+    } while (getIsObstacleBehind() == 1);
     stopMotor();
     delay(500);
   }
@@ -324,7 +320,7 @@ void turnAround()
     
     reverseMotor(); //start backing up until collision detection
     do {
-    } while (getIsObstacleThere() == 1);
+    } while (getIsObstacleBehind() == 1);
     stopMotor();
     delay(500);
     
@@ -336,7 +332,7 @@ void turnAround()
     driveMotor(); //drive forward
     do {
       leftCurrentDistance = getLeftDistance();
-    } while (getIsObstacleThere() == 1);
+    } while (getIsObstacleInFront() == 1);
     stopMotor();
     delay(500);
 
@@ -347,7 +343,7 @@ void turnAround()
 
     reverseMotor(); //start backing up until collision detection
     do {
-    } while (getIsObstacleThere() == 1);
+    } while (getIsObstacleBehind() == 1);
     stopMotor();
     delay(500);
   }
@@ -386,7 +382,7 @@ void loop()
   leftCurrentDistance = getLeftDistance(); //get the current distance (left side)
   distanceDelta = abs(rightCurrentDistance - leftCurrentDistance); //absolute value of the difference between the left and right sides
   //check IR sensors for an object
-  if (getIsObstacleThere() == 0 ) //object is in front of car
+  if (getIsObstacleInFront() == 0 ) //object is in front of car
   {
     //stop car and start turn-around process
     stopMotor();
