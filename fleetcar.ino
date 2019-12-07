@@ -73,15 +73,17 @@ float backRightDistance = 0.0; //distance to object when looking back over right
 
 //dc motor - speeds
 int carSpeeds[16] = {16, 32, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192, 208, 224, 240, 255};
-int carGearFwd = 10; 
-int carGearRev = 10;
-int carGear = 10;
+int carGearFwd = 0; 
+int carGearRev = 0;
+int carGear = 0;
 int gearCounter = 0;
 int iRList[4] = {1, 1, 1, 1}; //HIGH = no object, LOW = object 1 = HIGH, 0 = LOW
 
 //global vars (both front and back sensors)
 const float rearCollisionDistance = 900.0;
 const float frontCollisionDistance = 300.0;
+const int turnAroundDelay = 500;
+const int lookDelay = 600;
 
 void setup()
 {
@@ -239,21 +241,21 @@ bool turnLeft()
 bool lookLeft()
 {
   servoReverse.write(lookLeftAngle);
-  delay(600);
+  delay(lookDelay);
   return true;
 }
 
 bool lookRight()
 {
   servoReverse.write(lookRightAngle);
-  delay(600);
+  delay(lookDelay);
   return true;
 }
 
 bool lookStraightBack()
 {
   servoReverse.write(lookStraightBackAngle);
-  delay(600);
+  delay(lookDelay);
   return true;
 }
 
@@ -276,83 +278,83 @@ void turnAround()
     do { //turn wheels left
       //execution code is in while condition.  need to refactor
     } while (turnLeft());
-    delay(500);
+    delay(turnAroundDelay);
     
     reverseMotor(); //start backing up until collision detection
     do {
     } while (getIsObstacleBehind() == 1);
     stopMotor();
-    delay(500);
+    delay(turnAroundDelay);
     
     do { //turn wheels right
       //execution code is in condition.  need to refactor
     } while (turnRight()); //turn right
-    delay(500);
+    delay(turnAroundDelay);
     
     driveMotor(); //drive forward
     do {
       rightCurrentDistance = getRightDistance();
     } while (getIsObstacleInFront() == 1);
     stopMotor();
-    delay(500);
+    delay(turnAroundDelay);
 
     do { //turn wheels left
       //execution code is in while condition.  need to refactor
     } while (turnLeft());
-    delay(500);
+    delay(turnAroundDelay);
 
     reverseMotor(); //start backing up until collision detection
     do { 
     } while (getIsObstacleBehind() == 1);
     stopMotor();
-    delay(500);
+    delay(turnAroundDelay);
   }
   
   else if(backRightDistance > backLeftDistance) //turn around counter clockwise
   {
     servoReverse.write(lookRightAngle); //look over right shoulder
-    delay(500);
+    delay(turnAroundDelay);
 
     do { //turn wheels right
       //execution code is in while condition.  need to refactor
     } while (turnRight());
-    delay(500);
+    delay(turnAroundDelay);
     
     reverseMotor(); //start backing up until collision detection
     do {
     } while (getIsObstacleBehind() == 1);
     stopMotor();
-    delay(500);
+    delay(turnAroundDelay);
     
     do { //turn wheels left
       //execution code is in condition.  need to refactor
     } while (turnLeft()); //turn left
-    delay(500);
+    delay(turnAroundDelay);
     
     driveMotor(); //drive forward
     do {
       leftCurrentDistance = getLeftDistance();
     } while (getIsObstacleInFront() == 1);
     stopMotor();
-    delay(500);
+    delay(turnAroundDelay);
 
     do { //turn wheels right
       //execution code is in while condition.  need to refactor
     } while (turnRight());
-    delay(500);
+    delay(turnAroundDelay);
 
     reverseMotor(); //start backing up until collision detection
     do {
     } while (getIsObstacleBehind() == 1);
     stopMotor();
-    delay(500);
+    delay(turnAroundDelay);
   }
   else
   {
     //reverseMotor();
     //delay(2000);
   }
-  servoReverse.write(82); //look straight back (rear camera/sonic sensor)
+  servoReverse.write(lookStraightBackAngle); //look straight back (rear camera/sonic sensor)
   delay(500);
   servoSteering.write(initialAngle);
   delay(500);
@@ -362,7 +364,7 @@ void turnAround()
 //gear down
 void gearDown()
 {
-  if(carGearFwd > 8)
+  if(carGearFwd > 6)
   {
     carGearFwd = carGearFwd-1;
     motor.setSpeed(carSpeeds[carGearFwd]);
@@ -370,7 +372,19 @@ void gearDown()
   }
 }
 
-void loop()
+//gear up
+void gearUp()
+{
+  if(carGearFwd < 8)
+  {
+    carGearFwd = carGearFwd+1;
+    motor.setSpeed(carSpeeds[carGearFwd]);
+    delay(15);
+  }
+}
+
+
+void loop() 
 {
   if(gearCounter == 5)
   {
