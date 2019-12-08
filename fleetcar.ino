@@ -70,13 +70,14 @@ float lookStraightBackAngle = 82.0; //the angle the rear camera points when it i
 float reverseDistance = 0.0; //(current) distance from the wall behind the car while backing up (turning around)
 float backLeftDistance = 0.0; //distance to object when looking back over left shoulder
 float backRightDistance = 0.0; //distance to object when looking back over right shoulder
+float isMovingDistance1 = 0.0; //first distance to check (see if car is moving forward or not)
+float isMovingDistance2 = 0.0; //second distance to check (see if car is moving forward or not)
 
 //dc motor - speeds
-int carSpeeds[16] = {16, 32, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192, 208, 224, 240, 255};
+int carSpeeds[255];
 int carGearFwd = 0; 
 int carGearRev = 0;
 int carGear = 0;
-int gearCounter = 0;
 int iRList[4] = {1, 1, 1, 1}; //HIGH = no object, LOW = object 1 = HIGH, 0 = LOW
 
 //global vars (both front and back sensors)
@@ -90,6 +91,12 @@ void setup()
   Serial.begin(9600);
   Serial.print("MTO AI Fleet Car");
   Serial.println();
+
+  //setup speeds/gears array
+  for (int i = 0; i < 255; i++)
+  {
+    carSpeeds[i] = i;
+  }
   
   //delay
   delay(3000);
@@ -212,7 +219,7 @@ bool turnRight()
   if (moveAngle > minAngle)
   {
     servoSteering.write(moveAngle);
-    delay(35); //let motor take time to get to the new position
+    delay(20); //let motor take time to get to the new position
     return true;
   }
   else
@@ -229,7 +236,7 @@ bool turnLeft()
   if (moveAngle < maxAngle)
   {
     servoSteering.write(moveAngle);
-    delay(35); //let motor take time to get to the new position
+    delay(20); //let motor take time to get to the new position
     return true;
   }
   else
@@ -257,6 +264,26 @@ bool lookStraightBack()
   servoReverse.write(lookStraightBackAngle);
   delay(lookDelay);
   return true;
+}
+
+bool isMoving()
+{
+  float isMovingDistance = 0.0;
+  //isMovingDistance1 = float(hcsr04MiddleRear.ping_median(2));
+  isMovingDistance1 = hcsr04MiddleRear.ping_cm();
+  delay(15);
+  isMovingDistance2 = hcsr04MiddleRear.ping_cm();
+  isMovingDistance = isMovingDistance2 - isMovingDistance1;
+  Serial.print(isMovingDistance);
+  Serial.print("\n");
+  if (isMovingDistance > 1.0)
+  {
+    return true;   
+  }
+  else
+  {
+    return false;
+  }
 }
 
 //check blind spots and then turn around
@@ -364,39 +391,37 @@ void turnAround()
 //gear down
 void gearDown()
 {
-  if(carGearFwd > 6)
+  if(carSpeeds[carGearFwd] > 3)
   {
     carGearFwd = carGearFwd-1;
     motor.setSpeed(carSpeeds[carGearFwd]);
-    delay(15);
   }
 }
 
 //gear up
 void gearUp()
 {
-  if(carGearFwd < 8)
+  if(carSpeeds[carGearFwd] < 35)
   {
     carGearFwd = carGearFwd+1;
     motor.setSpeed(carSpeeds[carGearFwd]);
-    delay(15);
   }
 }
 
-
+//main method into the program
 void loop() 
 {
-  if(gearCounter == 5)
+  if(isMoving() == false)
   {
-    gearDown();
-    gearCounter = 0;
+    gearUp(); 
   }
+  
   //need to add these to a state machine call
   rightCurrentDistance = getRightDistance(); //get the current distance (right side)
   leftCurrentDistance = getLeftDistance(); //get the current distance (left side)
   distanceDelta = abs(rightCurrentDistance - leftCurrentDistance); //absolute value of the difference between the left and right sides
   //check IR sensors for an object
-  if (getIsObstacleInFront() == 0 ) //object is in front of car
+  if (getIsObstacleInFront() == 0) //object is in front of car
   {
     //stop car and start turn-around process
     stopMotor();
@@ -420,10 +445,7 @@ void loop()
     {
       //do nothing for now      
     }
-    
     leftDistance = leftCurrentDistance;
     rightDistance = rightCurrentDistance;
-    delay(15);
   }
-  gearCounter = gearCounter+1;
 }
